@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test</title>
+</head>
+<body>
+    <div id="test">
+        <p>{{msg}}</p>
+        <p>{{hello}}</p>
+        <p>{{world}}</p>
+    </div>
+<script>
+    var bindingMark = "v-text";
+    var Element = function (id, initData) {
+        var elem = document.getElementById(id);
+        var self = this;
+        var data = self.data = {};
+        var bindings = {};
+        elem.innerHTML = elem.innerHTML.replace(/\{\{(.*)\}\}/g, function(match, variable) {
+            bindings[variable] = {};
+
+            return "<span " + bindingMark + "=" + variable + ">" + match + "</span>";
+        });
+
+
+
+        Object.keys(bindings).forEach(function(variable) {
+            var selector = "[" + bindingMark + "=" + variable + "]";
+            bindings[variable].els = elem.querySelectorAll(selector);
+            Object.defineProperty(data, variable, {
+                set: function(newVal) {
+                    console.log(newVal);
+                    bindings[variable].els.forEach(function(e) {
+                        bindings[variable].value = e.innerText = newVal;
+                    })
+                },
+                get: function() {
+                    return bindings[variable].value;
+                }
+            })
+            bindings[variable].els.forEach(function (e) {
+                e.removeAttribute(bindingMark);
+            })
+        });
+
+        if (initData) {
+            Object.keys(initData).forEach(function(variable) {
+                data[variable] = initData[variable];
+            })
+        }
+    }
+
+    var e = new Element("test", {
+        "msg": "hello"
+    })
+</script>
+</body>
+</html>
