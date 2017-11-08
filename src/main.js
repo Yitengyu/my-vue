@@ -1,4 +1,5 @@
 import Directives from "./directives";
+import Filters from "./filters";
 const prefix = "v";
 const selector = Object.keys(Directives).map(function(d) {
     return "[" + prefix + "-" + d + "]";
@@ -28,12 +29,24 @@ let Seed = function(opts) {
     }
     function parseDirective(attr) {
         let arg = attr.name.slice(prefix.length + 1),
-            key = attr.value,
             def = Directives[arg];
+
+        let exp = attr.value;
+        const pipeIndex = exp.indexOf("|");
+        let key = pipeIndex === -1
+            ? exp
+            : exp.slice(0, pipeIndex).trim();
+        let filters = pipeIndex === -1
+            ? null
+            : exp.slice(pipeIndex + 1).split("|").map(function (filter) {
+                return filter.trim();
+            });
+
         return {
             attr: attr,
             key: key,
-            def: def
+            def: def,
+            filters: filters
         }
     }
     function bindDirective(self, el, bindings, directive) {
@@ -42,10 +55,12 @@ let Seed = function(opts) {
         bindings[key] || (bindings[key] = {
             value: undefined,
             directive: '',
-            els: []
+            els: [],
+            filters: null
         });
         bindings[key].directive = directive.def;
         bindings[key].els.push(el);
+        bindings[key].filters = directive.filters;
 
         if (!self.scope.hasOwnProperty(key)) {
             bindAccessors(self, key, bindings);
@@ -56,16 +71,25 @@ let Seed = function(opts) {
             get: function() {
                 return bindings[key].value;
             },
-            set: function(NewVal) {
-                bindings[key].value = NewVal;
+            set: function(newVal) {
+                bindings[key].value = newVal;
                 bindings[key].els.forEach(function(el) {
-                    bindings[key].directive(el, NewVal);
+                    let value = applyFilters(bindings[key].filters, newVal);
+                    bindings[key].directive(el, value);
                 });
             }
         })
     }
+    function applyFilters(filters, value) {
+        filters
+        && filters.forEach(function(filter) {
+            Filters[filter]
+            && ( value = Filters[filter](value) );
+        });
+        return value;
+    }
 };
-var app = new Seed({
+let app = new Seed({
     id: 'test',
     scope: {
         msg: 'hello',
