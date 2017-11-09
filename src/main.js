@@ -7,25 +7,29 @@ const selector = Object.keys(Directives).map(function(d) {
 
 let Seed = function(opts) {
     let self = this,
-        el = document.getElementById(opts.id),
-        els = el.querySelectorAll(selector),
-        bindings = {};
+        el = document.getElementById(opts.id), //Seed element
+        els = el.querySelectorAll(selector),  //elements with v attribute
+        bindings = {};  //key => array(directives)
 
-    self.scope = {};
+    self.scope = {};    //data scope
     els.forEach(processNode);
     Object.keys(opts.scope).forEach( function(key) {
         self.scope[key] = opts.scope[key];
     });
 
     function processNode(el) {
-        [].forEach.call(el.attributes, function(attr) {
-            let attrCopy = {
+        cloneAttributes(el.attributes).forEach(function(attr) {
+            let directive = parseDirective(attr);
+            directive && bindDirective(self, el, bindings, directive);
+        })
+    }
+    function cloneAttributes(attributes) {
+        return [].map.call(attributes, function(attr) {
+            return {
                 name: attr.name,
                 value: attr.value
             };
-            let directive = parseDirective(attrCopy);
-            directive && bindDirective(self, el, bindings, directive);
-        })
+        });
     }
     function parseDirective(attr) {
         let arg = attr.name.slice(prefix.length + 1),
@@ -56,13 +60,10 @@ let Seed = function(opts) {
             ? bindings[key]
             : (bindings[key] = {
             value: undefined,
-            directive: '',
-            els: [],
-            filters: null
+            directives: []
         });
-        binding.directive = directive.def;
-        binding.els.push(el);
-        binding.filters = directive.filters;
+        directive.el = el;
+        binding.directives.push(directive);
 
         if (!self.scope.hasOwnProperty(key)) {
             bindAccessors(self, key, binding);
@@ -75,9 +76,9 @@ let Seed = function(opts) {
             },
             set: function(newVal) {
                 binding.value = newVal;
-                binding.els.forEach(function(el) {
-                    let value = applyFilters(binding.filters, newVal);
-                    binding.directive(el, value);
+                binding.directives.forEach(function (directive) {
+                   let value = applyFilters(directive.filters, newVal);
+                   directive.def(directive.el, value);
                 });
             }
         })
