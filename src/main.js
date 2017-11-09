@@ -52,30 +52,32 @@ let Seed = function(opts) {
     function bindDirective(self, el, bindings, directive) {
         el.removeAttribute(directive.attr.name);
         let key = directive.key;
-        bindings[key] || (bindings[key] = {
+        let binding = bindings[key]
+            ? bindings[key]
+            : (bindings[key] = {
             value: undefined,
             directive: '',
             els: [],
             filters: null
         });
-        bindings[key].directive = directive.def;
-        bindings[key].els.push(el);
-        bindings[key].filters = directive.filters;
+        binding.directive = directive.def;
+        binding.els.push(el);
+        binding.filters = directive.filters;
 
         if (!self.scope.hasOwnProperty(key)) {
-            bindAccessors(self, key, bindings);
+            bindAccessors(self, key, binding);
         }
     }
-    function bindAccessors(self, key, bindings) {
+    function bindAccessors(self, key, binding) {
         Object.defineProperty(self.scope, key, {
             get: function() {
-                return bindings[key].value;
+                return binding.value;
             },
             set: function(newVal) {
-                bindings[key].value = newVal;
-                bindings[key].els.forEach(function(el) {
-                    let value = applyFilters(bindings[key].filters, newVal);
-                    bindings[key].directive(el, value);
+                binding.value = newVal;
+                binding.els.forEach(function(el) {
+                    let value = applyFilters(binding.filters, newVal);
+                    binding.directive(el, value);
                 });
             }
         })
